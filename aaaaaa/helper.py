@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
+from contextlib import ExitStack
 from copy import copy
 from typing import TYPE_CHECKING, Any, Union
 from unittest.mock import patch
@@ -40,10 +41,16 @@ def change_torch_load():
 
 @contextmanager
 def disable_safe_unpickle():
-    with (
-        patch.dict(os.environ, {"TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "1"}, clear=False),
-        patch.object(cmd_opts, "disable_safe_unpickle", True),
-    ):
+    with ExitStack() as stack:
+        stack.enter_context(
+            patch.dict(os.environ, {"TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "1"}, clear=False)
+        )
+
+        if hasattr(cmd_opts, "disable_safe_unpickle"):
+            stack.enter_context(
+                patch.object(cmd_opts, "disable_safe_unpickle", True)
+            )
+
         yield
 
 
